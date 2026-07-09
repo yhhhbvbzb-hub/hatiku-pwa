@@ -1,0 +1,2062 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Calculadora profesional de módulos de muebles, puertas y cajones con planos 2D y lista de cortes.">
+    <meta name="theme-color" content="#14b8a6">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Hatiku">
+    
+    <title>Hatiku Furniture Design • Calculadora de Módulos</title>
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Icons for PWA (coloca icon-192.png e icon-512.png en la misma carpeta) -->
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&amp;family=Space+Grotesk:wght@500;600&amp;display=swap');
+        
+        :root {
+            --accent: #14b8a6;
+        }
+        
+        body {
+            font-family: 'Inter', system_ui, sans-serif;
+        }
+        
+        .font-display {
+            font-family: 'Space Grotesk', 'Inter', sans-serif;
+            font-weight: 600;
+        }
+
+        .module-card {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .module-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+        }
+
+        .section-header {
+            font-size: 0.875rem;
+            letter-spacing: -.025em;
+            font-weight: 600;
+            color: #64748b;
+        }
+
+        .furniture-shadow {
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1),
+                        0 4px 6px -4px rgb(0 0 0 / 0.1);
+        }
+
+        .nav-active {
+            background-color: #14b8a6;
+            color: white;
+            box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.2);
+        }
+
+        .metric-value {
+            font-variant-numeric: tabular-nums;
+        }
+
+        .drawer-row {
+            transition: background-color 0.1s ease;
+        }
+
+        .drawer-row:hover {
+            background-color: #27251f;
+        }
+
+        .lock-btn {
+            transition: all 0.1s ease;
+        }
+
+        .lock-btn.locked {
+            background-color: #14b8a620;
+            border-color: #14b8a6;
+            color: #14b8a6;
+        }
+
+        .modal {
+            animation: modalPop 0.2s ease forwards;
+        }
+
+        @keyframes modalPop {
+            from {
+                opacity: 0;
+                transform: scale(0.95) translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        .calc-input {
+            transition: all 0.1s ease;
+        }
+
+        .calc-input:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.15);
+            border-color: #14b8a6;
+        }
+
+        .tech-table {
+            font-size: 0.75rem;
+        }
+
+        .hatiku-logo {
+            background: linear-gradient(135deg, #14b8a6, #0f766e);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 700;
+            letter-spacing: -.04em;
+        }
+
+        .furniture-grid {
+            background-image: 
+                linear-gradient(#27251f 1px, transparent 1px),
+                linear-gradient(90deg, #27251f 1px, transparent 1px);
+            background-size: 24px 24px;
+            opacity: 0.4;
+        }
+
+        .value-badge {
+            font-variant-numeric: tabular-nums;
+            background-color: #18181b;
+        }
+    </style>
+</head>
+<body class="bg-zinc-950 text-zinc-200">
+    <!-- HEADER -->
+    <header class="border-b border-zinc-800 bg-zinc-950/95 backdrop-blur-lg sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="flex items-center justify-between h-20">
+                <!-- Logo -->
+                <div class="flex items-center gap-x-3">
+                    <div class="w-11 h-11 bg-teal-600 rounded-2xl flex items-center justify-center shadow-inner">
+                        <i class="fa-solid fa-couch text-white text-3xl"></i>
+                    </div>
+                    <div>
+                        <span class="hatiku-logo text-3xl tracking-tighter">Hatiku</span>
+                        <span class="text-zinc-400 text-sm font-medium tracking-[3px] block -mt-1">FURNITURE DESIGN</span>
+                    </div>
+                </div>
+
+                <!-- Project Name -->
+                <div class="flex-1 max-w-md mx-8 hidden md:block">
+                    <div class="relative">
+                        <input id="projectNameInput" 
+                               class="w-full bg-zinc-900 border border-zinc-700 focus:border-teal-500 text-white placeholder:text-zinc-500 rounded-2xl px-5 py-2.5 text-sm font-medium"
+                               placeholder="Nombre del proyecto">
+                        <div class="absolute right-4 top-1/2 -mt-1.5 text-[10px] text-zinc-500 font-mono">PROYECTO</div>
+                    </div>
+                </div>
+
+                <!-- Header Actions -->
+                <div class="flex items-center gap-x-2">
+                    <button onclick="loadTechnicalExample()"
+                            class="flex items-center gap-x-2 px-4 py-2 text-sm font-medium bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 rounded-2xl transition-colors">
+                        <i class="fa-solid fa-flask mr-1.5"></i>
+                        <span class="hidden sm:inline">Cargar ejemplo técnico</span>
+                    </button>
+                    
+                    <button onclick="showTechModal()"
+                            class="w-10 h-10 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-zinc-900 rounded-2xl border border-zinc-700 transition-colors"
+                            title="Documentación técnica">
+                        <i class="fa-solid fa-info-circle"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="max-w-7xl mx-auto px-6 pt-8 pb-16">
+        
+        <!-- STATS BAR -->
+        <div class="flex flex-wrap items-center justify-between gap-4 mb-8">
+            <div>
+                <h1 class="text-4xl font-semibold tracking-tighter">Calculadora de Módulos</h1>
+                <p class="text-zinc-400 mt-1">Diseño preciso de puertas y cajones con sistema inteligente de bloqueo</p>
+            </div>
+            
+            <div class="flex items-center gap-x-6 text-sm">
+                <div class="flex items-center gap-x-2 bg-zinc-900 border border-zinc-800 rounded-2xl px-4 h-10">
+                    <div class="flex -space-x-1">
+                        <div class="w-2.5 h-2.5 bg-teal-400 rounded-full"></div>
+                        <div class="w-2.5 h-2.5 bg-teal-500 rounded-full"></div>
+                    </div>
+                    <div>
+                        <span id="statModules" class="font-mono font-semibold text-lg tabular-nums">0</span>
+                        <span class="text-zinc-400 text-xs ml-1">MÓDULOS</span>
+                    </div>
+                </div>
+                <div class="flex items-center gap-x-2 bg-zinc-900 border border-zinc-800 rounded-2xl px-4 h-10">
+                    <i class="fa-solid fa-door-open text-teal-400"></i>
+                    <div>
+                        <span id="statDoors" class="font-mono font-semibold text-lg tabular-nums">0</span>
+                        <span class="text-zinc-400 text-xs ml-1">PUERTAS</span>
+                    </div>
+                </div>
+                <div class="flex items-center gap-x-2 bg-zinc-900 border border-zinc-800 rounded-2xl px-4 h-10">
+                    <i class="fa-solid fa-box text-teal-400"></i>
+                    <div>
+                        <span id="statDrawers" class="font-mono font-semibold text-lg tabular-nums">0</span>
+                        <span class="text-zinc-400 text-xs ml-1">CAJONES</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
+            
+            <!-- CREAR MÓDULO -->
+            <div class="xl:col-span-5">
+                <div class="bg-zinc-900 border border-zinc-800 rounded-3xl p-7 furniture-shadow">
+                    <div class="flex items-center gap-x-3 mb-6">
+                        <div class="w-8 h-8 bg-teal-600/10 text-teal-400 rounded-2xl flex items-center justify-center">
+                            <i class="fa-solid fa-plus text-lg"></i>
+                        </div>
+                        <div>
+                            <h2 class="font-semibold text-xl tracking-tight">Crear Nuevo Módulo</h2>
+                            <p class="text-xs text-zinc-400">Ingresa las medidas y configuración</p>
+                        </div>
+                    </div>
+
+                    <!-- Form -->
+                    <div class="space-y-5">
+                        
+                        <!-- Nombre del módulo (opcional) -->
+                        <div>
+                            <label class="section-header block mb-1.5">NOMBRE DEL MÓDULO <span class="text-zinc-500 font-normal">(opcional)</span></label>
+                            <input type="text" id="moduleNameInput" placeholder="Ej: Módulo superior cocina o Módulo base" 
+                                   class="calc-input w-full bg-zinc-950 border border-zinc-700 rounded-2xl px-4 py-2.5 text-sm focus:border-teal-500">
+                        </div>
+
+                        <!-- Color de melamina (obligatorio) -->
+                        <div>
+                            <label class="section-header block mb-1.5">COLOR MELAMINA <span class="text-red-400 font-bold">*</span></label>
+                            <input type="text" id="melamineColorInput" placeholder="Ej: Blanco, Roble Natural, Gris Ceniza, Nogal..." required
+                                   class="calc-input w-full bg-zinc-950 border border-zinc-700 rounded-2xl px-4 py-2.5 text-sm focus:border-teal-500">
+                            <p class="text-[10px] text-red-400 mt-0.5">Campo obligatorio</p>
+                        </div>
+
+                        <!-- Dimensiones -->
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="section-header block mb-1.5">ANCHO (cm)</label>
+                                <div class="relative">
+                                    <input type="number" id="widthInput" value="90" step="1" min="20" max="300"
+                                           class="calc-input w-full bg-zinc-950 border border-zinc-700 rounded-2xl px-4 py-3 text-2xl font-semibold tabular-nums focus:border-teal-500">
+                                    <div class="absolute right-4 top-1/2 -mt-2 text-xs text-zinc-500 font-medium">cm</div>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="section-header block mb-1.5">ALTO (cm)</label>
+                                <div class="relative">
+                                    <input type="number" id="heightInput" value="60" step="1" min="15" max="300"
+                                           class="calc-input w-full bg-zinc-950 border border-zinc-700 rounded-2xl px-4 py-3 text-2xl font-semibold tabular-nums focus:border-teal-500">
+                                    <div class="absolute right-4 top-1/2 -mt-2 text-xs text-zinc-500 font-medium">cm</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tipo de Canto -->
+                        <div>
+                            <label class="section-header block mb-2">TIPO DE CANTO</label>
+                            <div class="flex rounded-2xl border border-zinc-700 overflow-hidden">
+                                <button onclick="selectCantoType('duro')" id="btnCantoDuro"
+                                        class="flex-1 py-3 text-sm font-medium flex items-center justify-center gap-x-2 bg-zinc-800 border-r border-zinc-700 hover:bg-zinc-700 transition-colors">
+                                    <i class="fa-solid fa-shield-halved"></i>
+                                    <span><strong>Duro</strong> <span class="text-[10px] text-zinc-400">(0.2 cm)</span></span>
+                                </button>
+                                <button onclick="selectCantoType('pvc')" id="btnCantoPvc"
+                                        class="flex-1 py-3 text-sm font-medium flex items-center justify-center gap-x-2 hover:bg-zinc-800 transition-colors">
+                                    <i class="fa-solid fa-layer-group"></i>
+                                    <span><strong>PVC</strong> <span class="text-[10px] text-zinc-400">(0.1 cm)</span></span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Puertas y Cajones -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            
+                            <!-- Puertas -->
+                            <div class="border border-zinc-700 rounded-2xl p-4">
+                                <label class="flex items-center gap-x-2 cursor-pointer">
+                                    <input type="checkbox" id="hasDoors" checked 
+                                           class="w-4 h-4 accent-teal-600 rounded">
+                                    <span class="font-medium text-sm">Incluir puertas</span>
+                                </label>
+                                <div class="mt-3 flex items-center gap-x-2">
+                                    <div class="flex-1">
+                                        <label class="text-[10px] text-zinc-400 block mb-1">CANTIDAD</label>
+                                        <input type="number" id="numDoorsInput" value="2" min="1" max="6"
+                                               class="calc-input w-full bg-zinc-950 border border-zinc-700 rounded-xl px-3 py-2 text-lg font-semibold">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Cajones -->
+                            <div class="border border-zinc-700 rounded-2xl p-4">
+                                <label class="flex items-center gap-x-2 cursor-pointer">
+                                    <input type="checkbox" id="hasDrawers" checked 
+                                           class="w-4 h-4 accent-teal-600 rounded">
+                                    <span class="font-medium text-sm">Incluir cajones</span>
+                                </label>
+                                <div class="mt-3 flex items-center gap-x-2">
+                                    <div class="flex-1">
+                                        <label class="text-[10px] text-zinc-400 block mb-1">CANTIDAD</label>
+                                        <input type="number" id="numDrawersInput" value="3" min="1" max="8"
+                                               class="calc-input w-full bg-zinc-950 border border-zinc-700 rounded-xl px-3 py-2 text-lg font-semibold">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Botón principal -->
+                        <button onclick="addModule()"
+                                class="w-full mt-2 bg-teal-600 hover:bg-teal-500 active:bg-teal-700 transition-all text-white font-semibold py-4 rounded-2xl flex items-center justify-center gap-x-3 text-base shadow-lg shadow-teal-900/30">
+                            <i class="fa-solid fa-calculator"></i>
+                            <span>CALCULAR Y AGREGAR MÓDULO</span>
+                        </button>
+                        
+                        <div class="text-center">
+                            <p class="text-[10px] text-zinc-500">Se aplicarán las fórmulas técnicas exactas con redondeo a 2 decimales</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MÓDULOS CREADOS -->
+            <div class="xl:col-span-7">
+                <div class="flex items-center justify-between mb-4 px-1">
+                    <div>
+                        <h2 class="font-semibold text-xl tracking-tight">Módulos Creados</h2>
+                        <p class="text-xs text-zinc-400" id="modulesSubtitle">0 módulos • Listos para PDF</p>
+                    </div>
+                    
+                    <div class="flex items-center gap-x-2">
+                        <button onclick="clearAllModules()"
+                                class="px-4 py-2 text-xs font-medium flex items-center gap-x-1.5 text-red-400 hover:text-red-300 hover:bg-red-950/40 border border-red-900/60 rounded-2xl transition-colors">
+                            <i class="fa-solid fa-trash-can text-xs"></i>
+                            <span>Borrar todos</span>
+                        </button>
+                        
+                        <button onclick="showPreviewModal()"
+                                class="px-5 py-2 text-xs font-medium flex items-center gap-x-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 rounded-2xl transition-colors">
+                            <i class="fa-solid fa-eye"></i>
+                            <span>Vista previa</span>
+                        </button>
+                        
+                        <button onclick="generatePDF()"
+                                class="px-5 py-2 text-xs font-semibold flex items-center gap-x-2 bg-teal-600 hover:bg-teal-500 text-white rounded-2xl transition-all active:scale-[0.985]">
+                            <i class="fa-solid fa-file-pdf"></i>
+                            <span>Crear PDF</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Modules Grid -->
+                <div id="modulesList" 
+                     class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-3 gap-4 min-h-[280px]">
+                    <!-- Populated by JS -->
+                </div>
+                
+                <div id="emptyState" class="hidden flex flex-col items-center justify-center py-12 text-center border border-dashed border-zinc-700 rounded-3xl">
+                    <i class="fa-solid fa-boxes text-5xl text-zinc-700 mb-4"></i>
+                    <p class="text-zinc-400 text-sm max-w-[220px]">Aún no hay módulos creados.<br>Usa el formulario de la izquierda para comenzar.</p>
+                    <button onclick="loadTechnicalExample()" 
+                            class="mt-5 text-xs px-4 py-2 border border-zinc-600 hover:bg-zinc-900 rounded-2xl flex items-center gap-x-2 text-teal-400">
+                        <i class="fa-solid fa-magic"></i>
+                        <span>Cargar ejemplo técnico</span>
+                    </button>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+
+    <!-- DRAWER EDITOR MODAL -->
+    <div id="drawerModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+        <div class="bg-zinc-900 border border-zinc-700 w-full max-w-lg rounded-3xl overflow-hidden modal">
+            
+            <!-- Modal Header -->
+            <div class="px-6 pt-5 pb-4 border-b border-zinc-700 flex items-center justify-between bg-zinc-950">
+                <div>
+                    <div class="text-xs tracking-[1px] text-teal-400 font-medium">EDICIÓN INTELIGENTE</div>
+                    <div id="modalModuleName" class="font-semibold text-xl tracking-tight"></div>
+                </div>
+                <button onclick="closeDrawerModal()" class="w-9 h-9 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-2xl">
+                    <i class="fa-solid fa-times text-xl"></i>
+                </button>
+            </div>
+
+            <div class="p-6">
+                
+                <!-- Info metrics -->
+                <div class="grid grid-cols-3 gap-3 mb-6">
+                    <div class="bg-zinc-950 border border-zinc-700 rounded-2xl p-3 text-center">
+                        <div class="text-[10px] text-zinc-400">ANCHO CAJÓN</div>
+                        <div id="infoDrawerWidth" class="font-mono text-xl font-semibold tabular-nums text-white mt-0.5"></div>
+                    </div>
+                    <div class="bg-zinc-950 border border-zinc-700 rounded-2xl p-3 text-center">
+                        <div class="text-[10px] text-zinc-400">ESPACIO INTERNO</div>
+                        <div id="infoInternalHeight" class="font-mono text-xl font-semibold tabular-nums text-white mt-0.5"></div>
+                    </div>
+                    <div class="bg-zinc-950 border border-zinc-700 rounded-2xl p-3 text-center">
+                        <div class="text-[10px] text-zinc-400">DEDUCCIÓN</div>
+                        <div id="infoDeduction" class="font-mono text-xl font-semibold tabular-nums text-white mt-0.5"></div>
+                    </div>
+                </div>
+
+                <!-- Drawers list -->
+                <div class="mb-1 flex items-center justify-between px-1">
+                    <div class="text-xs font-medium text-zinc-300">CAJONES INDIVIDUALES</div>
+                    <div id="sumStatus" class="text-[10px] font-mono px-2 py-0.5 rounded bg-zinc-800 text-emerald-400"></div>
+                </div>
+                
+                <div id="drawersList" class="space-y-2 max-h-[280px] overflow-auto pr-1 custom-scroll">
+                    <!-- Populated dynamically by JS -->
+                </div>
+
+                <!-- Current sum -->
+                <div class="mt-3 px-1 flex items-baseline justify-between text-xs">
+                    <div class="text-zinc-400">Suma actual de alturas</div>
+                    <div class="font-mono">
+                        <span id="currentSum" class="font-semibold text-base tabular-nums">0.00</span>
+                        <span class="text-zinc-500">/ <span id="targetInternal"></span> cm</span>
+                    </div>
+                </div>
+
+                <!-- Action buttons -->
+                <div class="grid grid-cols-2 gap-3 mt-6">
+                    <button onclick="adjustUnlockedDrawersAction()"
+                            class="flex items-center justify-center gap-x-2 py-3 text-sm font-medium bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 rounded-2xl transition-colors">
+                        <i class="fa-solid fa-magic"></i>
+                        <span>Ajustar desbloqueados</span>
+                    </button>
+                    
+                    <button onclick="resetDrawersToEqual()"
+                            class="flex items-center justify-center gap-x-2 py-3 text-sm font-medium bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 rounded-2xl transition-colors">
+                        <i class="fa-solid fa-sync-alt"></i>
+                        <span>Restablecer a iguales</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="px-6 py-4 bg-zinc-950 border-t border-zinc-700 flex gap-x-3">
+                <button onclick="cancelDrawerEdit()"
+                        class="flex-1 py-3 text-sm font-medium border border-zinc-600 hover:bg-zinc-800 rounded-2xl transition-colors">
+                    Cancelar
+                </button>
+                <button onclick="saveDrawerChanges()"
+                        class="flex-1 py-3 text-sm font-semibold bg-teal-600 hover:bg-teal-500 rounded-2xl transition-colors">
+                    Guardar cambios
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PREVIEW MODAL -->
+    <div id="previewModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+        <div class="bg-zinc-900 border border-zinc-700 w-full max-w-2xl rounded-3xl overflow-hidden modal">
+            <div class="px-6 pt-5 pb-4 border-b border-zinc-700 flex justify-between items-center">
+                <div>
+                    <div class="text-teal-400 text-xs tracking-widest font-medium">VISTA PREVIA</div>
+                    <div class="font-semibold text-xl">Listado de Puertas y Cajones</div>
+                </div>
+                <button onclick="closePreviewModal()" class="text-zinc-400 hover:text-white p-2">
+                    <i class="fa-solid fa-times text-2xl"></i>
+                </button>
+            </div>
+            
+            <div class="p-6 max-h-[420px] overflow-auto" id="previewContent">
+                <!-- Generated content -->
+            </div>
+            
+            <div class="px-6 py-4 bg-zinc-950 border-t border-zinc-700 flex gap-x-3">
+                <button onclick="copyPreviewToClipboard()"
+                        class="flex-1 py-3 text-sm font-medium border border-zinc-600 hover:bg-zinc-800 rounded-2xl flex items-center justify-center gap-x-2">
+                    <i class="fa-solid fa-copy"></i>
+                    <span>Copiar al portapapeles</span>
+                </button>
+                <button onclick="generatePDFFromPreview()"
+                        class="flex-1 py-3 text-sm font-semibold bg-teal-600 hover:bg-teal-500 rounded-2xl flex items-center justify-center gap-x-2">
+                    <i class="fa-solid fa-file-pdf"></i>
+                    <span>Generar PDF ahora</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TECH DOC MODAL -->
+    <div id="techModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+        <div class="bg-zinc-900 border border-zinc-700 w-full max-w-lg rounded-3xl overflow-hidden modal">
+            <div class="px-6 pt-5 pb-3 border-b border-zinc-700">
+                <div class="font-semibold text-xl">Documentación Técnica</div>
+                <div class="text-xs text-zinc-400">Fórmulas y constantes utilizadas</div>
+            </div>
+            
+            <div class="p-6 text-sm space-y-6">
+                <div>
+                    <div class="font-medium mb-2 text-teal-400">CONSTANTES FIJAS</div>
+                    <div class="grid grid-cols-3 gap-2 text-xs">
+                        <div class="bg-zinc-950 border border-zinc-700 rounded-xl p-3">
+                            <div class="text-zinc-400">Separación (S)</div>
+                            <div class="font-mono text-lg font-semibold">0.2 cm</div>
+                        </div>
+                        <div class="bg-zinc-950 border border-zinc-700 rounded-xl p-3">
+                            <div class="text-zinc-400">Canto Duro (C)</div>
+                            <div class="font-mono text-lg font-semibold">0.2 cm</div>
+                        </div>
+                        <div class="bg-zinc-950 border border-zinc-700 rounded-xl p-3">
+                            <div class="text-zinc-400">Canto PVC (C)</div>
+                            <div class="font-mono text-lg font-semibold">0.1 cm</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div>
+                    <div class="font-medium mb-2 text-teal-400">FÓRMULA GENERAL DE DEDUCCIÓN</div>
+                    <div class="bg-zinc-950 border border-zinc-700 rounded-2xl p-4 font-mono text-xs">
+                        Deducción Total = 2 × (S + C) + (N − 1) × (2 × C + S)
+                    </div>
+                    <div class="text-[10px] text-zinc-400 mt-1 px-1">Se aplica tanto a puertas (ancho) como a cajones (altura interna)</div>
+                </div>
+                
+                <div class="text-xs bg-zinc-950 border border-zinc-700 rounded-2xl p-4">
+                    <div class="font-medium mb-2">Ejemplos de deducción (Canto Duro)</div>
+                    <table class="w-full text-[10px]">
+                        <tr class="text-zinc-400"><td class="py-0.5">N=1</td><td class="font-mono">0.8 cm</td></tr>
+                        <tr class="text-zinc-400"><td class="py-0.5">N=2</td><td class="font-mono">1.4 cm</td></tr>
+                        <tr class="text-zinc-400"><td class="py-0.5">N=3</td><td class="font-mono">2.0 cm</td></tr>
+                        <tr class="text-zinc-400"><td class="py-0.5">N=4</td><td class="font-mono">2.6 cm</td></tr>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="px-6 py-4 bg-zinc-950 border-t border-zinc-700 text-xs text-center text-zinc-400">
+                Sistema 100% funcional • Redondeo a 2 decimales con compensación exacta de suma
+            </div>
+        </div>
+    </div>
+
+    <!-- 2D TECHNICAL PLAN MODAL -->
+    <div id="plan2DModal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-[70] flex items-center justify-center p-4">
+        <div class="bg-zinc-900 border border-zinc-700 w-full max-w-[720px] rounded-3xl overflow-hidden modal">
+            
+            <!-- Header -->
+            <div class="px-6 pt-5 pb-4 border-b border-zinc-700 flex items-center justify-between bg-zinc-950">
+                <div class="flex items-center gap-x-3">
+                    <div class="w-9 h-9 bg-teal-600/10 text-teal-400 rounded-2xl flex items-center justify-center">
+                        <i class="fa-solid fa-drafting-compass text-xl"></i>
+                    </div>
+                    <div>
+                        <div class="text-xs tracking-[1.5px] text-teal-400 font-medium">PLANO TÉCNICO 2D</div>
+                        <div id="planModalModuleName" class="font-semibold text-xl tracking-tight"></div>
+                    </div>
+                </div>
+                <button onclick="close2DPlanModal()" class="w-9 h-9 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-2xl">
+                    <i class="fa-solid fa-times text-xl"></i>
+                </button>
+            </div>
+
+            <div class="p-6">
+                <!-- Toolbar -->
+                <div class="flex flex-wrap items-center justify-between gap-3 mb-4 px-1">
+                    <div class="flex items-center gap-x-2 text-xs">
+                        <div class="bg-zinc-800 border border-zinc-700 rounded-2xl px-3 py-1 flex items-center gap-x-2">
+                            <span class="text-zinc-400">Escala:</span>
+                            <input type="range" id="planScaleSlider" min="0.4" max="1.6" step="0.1" value="1" 
+                                   class="w-28 accent-teal-600" oninput="regeneratePlanSVG()">
+                            <span id="planScaleValue" class="font-mono w-8 text-right text-teal-400">1.0x</span>
+                        </div>
+                        
+                        <label class="flex items-center gap-x-1.5 cursor-pointer text-xs px-3 py-1 bg-zinc-800 border border-zinc-700 rounded-2xl">
+                            <input type="checkbox" id="showDimensions" checked onchange="regeneratePlanSVG()" class="accent-teal-600">
+                            <span>Cotas</span>
+                        </label>
+                        
+                        <label class="flex items-center gap-x-1.5 cursor-pointer text-xs px-3 py-1 bg-zinc-800 border border-zinc-700 rounded-2xl">
+                            <input type="checkbox" id="showLabels" checked onchange="regeneratePlanSVG()" class="accent-teal-600">
+                            <span>Etiquetas</span>
+                        </label>
+                    </div>
+                    
+                    <div class="text-[10px] text-zinc-400 font-mono" id="planModuleInfo"></div>
+                </div>
+
+                <!-- SVG Drawing Area -->
+                <div class="bg-[#f8f7f4] border border-zinc-300 rounded-3xl p-5 flex items-center justify-center overflow-auto" 
+                     style="min-height: 380px; box-shadow: inset 0 2px 4px 0 rgb(0 0 0 / 0.06);">
+                    <div id="planSVGContainer" class="shadow-sm"></div>
+                </div>
+
+                <div class="mt-3 text-[10px] text-center text-zinc-400">
+                    Vista frontal • Cotas en cm • Proporciones reales según cálculos
+                </div>
+            </div>
+
+            <!-- Footer Actions -->
+            <div class="px-6 py-4 bg-zinc-950 border-t border-zinc-700 grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <button onclick="downloadPlanSVG()" 
+                        class="py-2.5 text-xs font-medium border border-zinc-600 hover:bg-zinc-800 rounded-2xl flex items-center justify-center gap-x-2 transition-colors">
+                    <i class="fa-solid fa-download"></i>
+                    <span>Descargar SVG</span>
+                </button>
+                
+                <button onclick="downloadPlanPNG()" 
+                        class="py-2.5 text-xs font-medium border border-zinc-600 hover:bg-zinc-800 rounded-2xl flex items-center justify-center gap-x-2 transition-colors">
+                    <i class="fa-solid fa-image"></i>
+                    <span>Descargar PNG</span>
+                </button>
+                
+                <button onclick="addPlanToPDF()" 
+                        class="py-2.5 text-xs font-medium border border-teal-600/60 text-teal-400 hover:bg-teal-900/20 rounded-2xl flex items-center justify-center gap-x-2 transition-colors">
+                    <i class="fa-solid fa-file-pdf"></i>
+                    <span>Añadir al PDF</span>
+                </button>
+                
+                <button onclick="close2DPlanModal()" 
+                        class="py-2.5 text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 rounded-2xl flex items-center justify-center gap-x-2 transition-colors">
+                    Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <footer class="border-t border-zinc-800 py-5 text-center text-[10px] text-zinc-500">
+        Hatiku Furniture Design • Calculadora Profesional • Funciona completamente offline • Datos guardados en tu navegador
+    </footer>
+
+    <script>
+        // ==================== CONFIG & STATE ====================
+        const S = 0.2;
+        const C_DURO = 0.2;
+        const C_PVC = 0.1;
+        
+        let modules = [];
+        let projectName = "Nuevo Proyecto";
+        let currentCantoType = 'duro';
+        let currentEditingModuleId = null;
+        let backupHeights = null;
+        let backupLocked = null;
+
+        function getC(type) {
+            return type === 'duro' ? C_DURO : C_PVC;
+        }
+
+        function calculateDeduction(N, cantoType) {
+            if (N <= 0) return 0;
+            const C = getC(cantoType);
+            return 2 * (S + C) + (N - 1) * (2 * C + S);
+        }
+
+        // ==================== EDGE BANDING (CANTO) ====================
+        function calculateEdgeBanding(mod) {
+            let totalCm = 0;
+
+            // Doors: perimeter of each door front × quantity
+            if (mod.numDoors > 0 && mod.doorAlto > 0 && mod.doorAncho > 0) {
+                const perimeterOneDoor = (mod.doorAlto * 2) + (mod.doorAncho * 2);
+                totalCm += perimeterOneDoor * mod.numDoors;
+            }
+
+            // Drawers: perimeter of each drawer front
+            if (mod.numDrawers > 0 && mod.drawerHeights && mod.drawerWidth > 0) {
+                mod.drawerHeights.forEach(h => {
+                    if (h > 0) {
+                        const perimeter = (mod.drawerWidth * 2) + (h * 2);
+                        totalCm += perimeter;
+                    }
+                });
+            }
+
+            // Convert cm → meters and round to 2 decimals
+            return parseFloat((totalCm / 100).toFixed(2));
+        }
+
+        // ==================== TAILWIND CONFIG ====================
+        function initTailwind() {
+            document.documentElement.style.setProperty('--accent', '#14b8a6');
+            
+            tailwind.config = {
+                theme: {
+                    extend: {
+                        fontFamily: {
+                            'display': ['Space Grotesk', 'Inter', 'system-ui', 'sans-serif']
+                        }
+                    }
+                }
+            };
+        }
+
+        // ==================== CANTO SELECTOR ====================
+        function selectCantoType(type) {
+            currentCantoType = type;
+            
+            const btnDuro = document.getElementById('btnCantoDuro');
+            const btnPvc = document.getElementById('btnCantoPvc');
+            
+            if (type === 'duro') {
+                btnDuro.classList.add('bg-zinc-700', 'border-teal-500');
+                btnDuro.classList.remove('hover:bg-zinc-800');
+                btnPvc.classList.remove('bg-zinc-700', 'border-teal-500');
+                btnPvc.classList.add('hover:bg-zinc-800');
+            } else {
+                btnPvc.classList.add('bg-zinc-700', 'border-teal-500');
+                btnPvc.classList.remove('hover:bg-zinc-800');
+                btnDuro.classList.remove('bg-zinc-700', 'border-teal-500');
+                btnDuro.classList.add('hover:bg-zinc-800');
+            }
+        }
+
+        // ==================== LOCAL STORAGE ====================
+        function saveToLocalStorage() {
+            localStorage.setItem('hatiku_modules', JSON.stringify(modules));
+            localStorage.setItem('hatiku_projectName', projectName);
+        }
+
+        function loadFromLocalStorage() {
+            const savedModules = localStorage.getItem('hatiku_modules');
+            if (savedModules) {
+                modules = JSON.parse(savedModules);
+            }
+            
+            const savedName = localStorage.getItem('hatiku_projectName');
+            if (savedName) {
+                projectName = savedName;
+                document.getElementById('projectNameInput').value = projectName;
+            } else {
+                document.getElementById('projectNameInput').value = projectName;
+            }
+        }
+
+        function updateProjectName() {
+            const input = document.getElementById('projectNameInput');
+            projectName = input.value.trim() || "Nuevo Proyecto";
+            saveToLocalStorage();
+        }
+
+        // ==================== RENDER MODULES ====================
+        function updateStats() {
+            let totalModules = modules.length;
+            let totalDoors = 0;
+            let totalDrawers = 0;
+            let totalEdgeBanding = 0;
+            
+            modules.forEach(m => {
+                totalDoors += m.numDoors || 0;
+                totalDrawers += m.numDrawers || 0;
+                totalEdgeBanding += calculateEdgeBanding(m);
+            });
+            
+            document.getElementById('statModules').textContent = totalModules;
+            document.getElementById('statDoors').textContent = totalDoors;
+            document.getElementById('statDrawers').textContent = totalDrawers;
+            
+            const subtitle = document.getElementById('modulesSubtitle');
+            const selectedCount = modules.filter(m => m.selectedForPDF).length;
+            subtitle.textContent = `${totalModules} módulos • ${selectedCount} en PDF • Canto total: ${totalEdgeBanding.toFixed(1)} m`;
+        }
+
+        function renderModulesList() {
+            const container = document.getElementById('modulesList');
+            const emptyState = document.getElementById('emptyState');
+            
+            container.innerHTML = '';
+            
+            if (modules.length === 0) {
+                emptyState.classList.remove('hidden');
+                container.classList.add('hidden');
+                updateStats();
+                return;
+            }
+            
+            emptyState.classList.add('hidden');
+            container.classList.remove('hidden');
+            
+            modules.forEach((mod, index) => {
+                const card = document.createElement('div');
+                card.className = `module-card bg-zinc-900 border border-zinc-700 rounded-3xl p-5 flex flex-col`;
+                
+                let html = `
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex-1 min-w-0">
+                            <div class="font-semibold text-lg tracking-tight truncate">${mod.name}</div>
+                            <div class="text-xs text-zinc-400 mt-0.5">${mod.width} × ${mod.height} cm • Canto ${mod.cantoType === 'duro' ? 'Duro' : 'PVC'}</div>
+                        </div>
+                        
+                        <label class="flex items-center cursor-pointer ml-3" title="Incluir en PDF">
+                            <input type="checkbox" ${mod.selectedForPDF ? 'checked' : ''} 
+                                   onchange="toggleModulePDF('${mod.id}', this.checked)"
+                                   class="w-4 h-4 accent-teal-600 rounded">
+                        </label>
+                    </div>
+                `;
+                
+                // Puertas
+                if (mod.numDoors > 0) {
+                    html += `
+                        <div class="mb-3 bg-zinc-950 border border-zinc-700 rounded-2xl p-3">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <span class="text-teal-400 text-xs font-medium">PUERTAS</span>
+                                    <span class="ml-1.5 text-xs text-zinc-400">×${mod.numDoors}</span>
+                                </div>
+                            </div>
+                            <div class="mt-1.5 text-sm font-medium tabular-nums">
+                                ${mod.doorAlto} cm × ${mod.doorAncho} cm
+                            </div>
+                            <div class="text-[10px] text-zinc-500">Deducción: ${mod.doorDeduccion} cm</div>
+                        </div>
+                    `;
+                }
+                
+                // Cajones
+                if (mod.numDrawers > 0) {
+                    const heightsStr = mod.drawerHeights.map(h => h.toFixed(1)).join(' / ');
+                    html += `
+                        <div class="mb-3 bg-zinc-950 border border-zinc-700 rounded-2xl p-3">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <span class="text-teal-400 text-xs font-medium">CAJONES</span>
+                                    <span class="ml-1.5 text-xs text-zinc-400">×${mod.numDrawers}</span>
+                                </div>
+                            </div>
+                            <div class="mt-1 text-sm">
+                                <span class="font-medium tabular-nums">${mod.drawerWidth} cm</span> 
+                                <span class="text-xs text-zinc-400">ancho</span>
+                            </div>
+                            <div class="text-[10px] text-zinc-400 mt-0.5">Alturas: ${heightsStr} cm</div>
+                            <div class="text-[10px] text-emerald-400/70">Interno: ${mod.internalHeight} cm</div>
+                        </div>
+                    `;
+                }
+                
+                // Actions
+                html += `
+                    <div class="flex gap-x-2 mt-auto pt-2">
+                        ${mod.numDrawers > 0 ? `
+                            <button onclick="editDrawers('${mod.id}')" 
+                                    class="flex-1 text-xs font-medium py-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 rounded-2xl flex items-center justify-center gap-x-1.5 transition-colors">
+                                <i class="fa-solid fa-edit text-xs"></i>
+                                <span>Editar cajones</span>
+                            </button>
+                        ` : `
+                            <div class="flex-1"></div>
+                        `}
+                        
+                        <button onclick="show2DPlan('${mod.id}')" 
+                                class="flex-1 text-xs font-medium py-2 bg-zinc-800 hover:bg-teal-900/30 border border-teal-600/60 text-teal-400 rounded-2xl flex items-center justify-center gap-x-1.5 transition-colors"
+                                title="Ver plano técnico 2D">
+                            <i class="fa-solid fa-drafting-compass"></i>
+                            <span>Plano 2D</span>
+                        </button>
+
+                        <button onclick="duplicateModule('${mod.id}')" 
+                                class="px-3 text-xs font-medium py-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 text-teal-400 rounded-2xl transition-colors"
+                                title="Duplicar este módulo">
+                            <i class="fa-solid fa-copy"></i>
+                        </button>
+                        
+                        <button onclick="deleteModule('${mod.id}')" 
+                                class="px-3 text-xs font-medium py-2 text-red-400 hover:bg-red-950/40 border border-red-900/50 hover:border-red-800 rounded-2xl transition-colors">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </div>
+                `;
+                
+                card.innerHTML = html;
+                container.appendChild(card);
+            });
+            
+            updateStats();
+        }
+
+        function toggleModulePDF(id, checked) {
+            const mod = modules.find(m => m.id === id);
+            if (mod) {
+                mod.selectedForPDF = checked;
+                saveToLocalStorage();
+                updateStats();
+            }
+        }
+
+        // ==================== ADD MODULE ====================
+        function addModule() {
+            const width = parseFloat(document.getElementById('widthInput').value);
+            const height = parseFloat(document.getElementById('heightInput').value);
+            const hasDoors = document.getElementById('hasDoors').checked;
+            const numDoors = hasDoors ? parseInt(document.getElementById('numDoorsInput').value) : 0;
+            const hasDrawers = document.getElementById('hasDrawers').checked;
+            const numDrawers = hasDrawers ? parseInt(document.getElementById('numDrawersInput').value) : 0;
+            
+            if (!width || !height || width < 20 || height < 15) {
+                alert("Por favor ingresa medidas válidas (Ancho ≥ 20cm, Alto ≥ 15cm)");
+                return;
+            }
+            
+            if (numDoors === 0 && numDrawers === 0) {
+                alert("Debes incluir al menos puertas o cajones en el módulo.");
+                return;
+            }
+            
+            const cantoType = currentCantoType;
+            const C = getC(cantoType);
+            
+            // === PUERTAS ===
+            let doorAlto = 0, doorAncho = 0, doorDeduccion = 0;
+            if (numDoors > 0) {
+                doorDeduccion = parseFloat(calculateDeduction(numDoors, cantoType).toFixed(2));
+                doorAlto = parseFloat((height - 2 * (S + C)).toFixed(2));
+                doorAncho = parseFloat(((width - doorDeduccion) / numDoors).toFixed(2));
+            }
+            
+            // === CAJONES ===
+            let drawerWidth = 0, internalHeight = 0, deduction = 0;
+            let drawerHeights = [];
+            let drawerLocked = [];
+            
+            if (numDrawers > 0) {
+                deduction = parseFloat(calculateDeduction(numDrawers, cantoType).toFixed(2));
+                drawerWidth = parseFloat((width - 2 * (S + C)).toFixed(2));
+                internalHeight = parseFloat((height - deduction).toFixed(2));
+                
+                // Distribución inicial equitativa
+                if (internalHeight > 0 && numDrawers > 0) {
+                    const base = parseFloat((internalHeight / numDrawers).toFixed(2));
+                    let sum = 0;
+                    
+                    for (let i = 0; i < numDrawers - 1; i++) {
+                        drawerHeights.push(base);
+                        sum += base;
+                    }
+                    drawerHeights.push(parseFloat((internalHeight - sum).toFixed(2)));
+                }
+                
+                drawerLocked = Array(numDrawers).fill(false);
+            }
+            
+            // Use custom name if provided, otherwise auto-generate
+            const customName = document.getElementById('moduleNameInput').value.trim();
+            const autoName = `Módulo ${width}×${height} cm`;
+            
+            // Color melamina (obligatorio)
+            const melamineColor = document.getElementById('melamineColorInput').value.trim();
+            if (!melamineColor) {
+                alert("Por favor ingresa el Color de Melamina (es obligatorio).");
+                return;
+            }
+            
+            const newModule = {
+                id: 'mod_' + Date.now(),
+                name: customName || autoName,
+                height: height,
+                width: width,
+                cantoType: cantoType,
+                numDoors: numDoors,
+                numDrawers: numDrawers,
+                melamineColor: melamineColor,
+                selectedForPDF: true,
+                doorAlto: doorAlto,
+                doorAncho: doorAncho,
+                doorDeduccion: doorDeduccion,
+                drawerHeights: drawerHeights,
+                drawerLocked: drawerLocked,
+                drawerWidth: drawerWidth,
+                internalHeight: internalHeight,
+                deduction: deduction
+            };
+            
+            modules.push(newModule);
+            saveToLocalStorage();
+            renderModulesList();
+            
+            // Feedback
+            const btns = document.querySelectorAll('button');
+            btns.forEach(b => b.style.transition = 'all 0.1s');
+            
+            // Clear form optionally or keep values
+            showToast(`Módulo ${width}×${height} cm agregado correctamente`);
+        }
+
+        function showToast(message) {
+            const toast = document.createElement('div');
+            toast.className = `fixed bottom-6 left-1/2 -translate-x-1/2 bg-zinc-800 border border-zinc-600 text-sm px-5 py-2.5 rounded-2xl flex items-center gap-x-2 shadow-xl z-[70]`;
+            toast.innerHTML = `
+                <i class="fa-solid fa-check-circle text-teal-400"></i>
+                <span>${message}</span>
+            `;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.transition = 'all 0.2s';
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 200);
+            }, 2200);
+        }
+
+        // ==================== DELETE MODULES ====================
+        function deleteModule(id) {
+            if (!confirm("¿Eliminar este módulo?")) return;
+            
+            modules = modules.filter(m => m.id !== id);
+            saveToLocalStorage();
+            renderModulesList();
+        }
+        
+        function clearAllModules() {
+            if (modules.length === 0) return;
+            if (!confirm(`¿Borrar los ${modules.length} módulos creados? Esta acción no se puede deshacer.`)) return;
+            
+            modules = [];
+            saveToLocalStorage();
+            renderModulesList();
+        }
+
+        // ==================== DUPLICATE MODULE ====================
+        function duplicateModule(id) {
+            const original = modules.find(m => m.id === id);
+            if (!original) return;
+
+            // Create a deep copy with new ID and slightly modified name
+            const copy = JSON.parse(JSON.stringify(original));
+            copy.id = 'mod_' + Date.now();
+            
+            // Smart name for the copy
+            if (original.name.includes('(copia')) {
+                copy.name = original.name.replace(/\(copia.*?\)/, `(copia ${Date.now().toString().slice(-4)})`);
+            } else {
+                copy.name = `${original.name} (copia)`;
+            }
+
+            modules.push(copy);
+            saveToLocalStorage();
+            renderModulesList();
+            showToast("Módulo duplicado correctamente");
+        }
+
+        // ==================== DRAWER EDITOR ====================
+        function editDrawers(id) {
+            const mod = modules.find(m => m.id === id);
+            if (!mod || mod.numDrawers === 0) return;
+            
+            currentEditingModuleId = id;
+            backupHeights = [...mod.drawerHeights];
+            backupLocked = [...mod.drawerLocked];
+            
+            // Populate modal
+            document.getElementById('modalModuleName').textContent = mod.name;
+            document.getElementById('infoDrawerWidth').textContent = mod.drawerWidth + ' cm';
+            document.getElementById('infoInternalHeight').textContent = mod.internalHeight + ' cm';
+            document.getElementById('infoDeduction').textContent = mod.deduction + ' cm';
+            document.getElementById('targetInternal').textContent = mod.internalHeight;
+            
+            populateDrawersList(mod);
+            updateCurrentSum();
+            
+            document.getElementById('drawerModal').classList.remove('hidden');
+            document.getElementById('drawerModal').classList.add('flex');
+        }
+        
+        function populateDrawersList(mod) {
+            const container = document.getElementById('drawersList');
+            container.innerHTML = '';
+            
+            mod.drawerHeights.forEach((height, index) => {
+                const isLocked = mod.drawerLocked[index];
+                const isFirst = index === 0;
+                const isLast = index === mod.numDrawers - 1;
+                
+                let label = `Cajón #${index + 1}`;
+                if (isFirst) label = 'Cajón Superior';
+                else if (isLast) label = 'Cajón Inferior';
+                else label = `Cajón Intermedio ${index}`;
+                
+                const row = document.createElement('div');
+                row.className = `drawer-row flex items-center gap-3 bg-zinc-950 border border-zinc-700 rounded-2xl px-4 py-3`;
+                
+                row.innerHTML = `
+                    <div class="w-7 text-[10px] text-center font-mono text-zinc-500 pt-1">${index + 1}</div>
+                    
+                    <div class="flex-1">
+                        <div class="text-xs text-zinc-300 mb-0.5">${label}</div>
+                        <input type="number" step="0.1" min="1" max="200"
+                               class="drawer-height-input calc-input w-full bg-zinc-900 border border-zinc-600 focus:border-teal-500 rounded-xl px-3 py-[5px] text-lg font-semibold tabular-nums"
+                               value="${height}" data-index="${index}">
+                    </div>
+                    
+                    <button class="lock-btn w-9 h-9 flex-shrink-0 flex items-center justify-center rounded-2xl border text-lg transition-all ${isLocked ? 'locked border-teal-500 bg-teal-500/10 text-teal-400' : 'border-zinc-600 text-zinc-400 hover:bg-zinc-800'}"
+                            data-index="${index}">
+                        <i class="fa-solid ${isLocked ? 'fa-lock' : 'fa-lock-open'}"></i>
+                    </button>
+                `;
+                
+                container.appendChild(row);
+            });
+            
+            // Attach listeners
+            attachDrawerListeners(mod);
+        }
+        
+        function attachDrawerListeners(mod) {
+            // Height inputs
+            document.querySelectorAll('.drawer-height-input').forEach(input => {
+                input.oninput = function() {
+                    const idx = parseInt(this.dataset.index);
+                    let val = parseFloat(this.value);
+                    
+                    if (isNaN(val) || val < 0.5) val = 0.5;
+                    
+                    mod.drawerHeights[idx] = parseFloat(val.toFixed(2));
+                    mod.drawerLocked[idx] = false; // Auto unlock on manual edit
+                    
+                    // Update the lock button style for this row
+                    const lockBtn = this.closest('.drawer-row').querySelector('.lock-btn');
+                    if (lockBtn) updateLockButton(lockBtn, false);
+                    
+                    updateCurrentSum();
+                };
+            });
+            
+            // Lock buttons
+            document.querySelectorAll('.lock-btn').forEach(btn => {
+                btn.onclick = function() {
+                    const idx = parseInt(this.dataset.index);
+                    mod.drawerLocked[idx] = !mod.drawerLocked[idx];
+                    
+                    updateLockButton(this, mod.drawerLocked[idx]);
+                    updateCurrentSum();
+                };
+            });
+        }
+        
+        function updateLockButton(btn, isLocked) {
+            if (isLocked) {
+                btn.classList.add('locked', 'border-teal-500', 'bg-teal-500/10', 'text-teal-400');
+                btn.classList.remove('border-zinc-600', 'text-zinc-400', 'hover:bg-zinc-800');
+                btn.innerHTML = '<i class="fa-solid fa-lock"></i>';
+            } else {
+                btn.classList.remove('locked', 'border-teal-500', 'bg-teal-500/10', 'text-teal-400');
+                btn.classList.add('border-zinc-600', 'text-zinc-400', 'hover:bg-zinc-800');
+                btn.innerHTML = '<i class="fa-solid fa-lock-open"></i>';
+            }
+        }
+        
+        function updateCurrentSum() {
+            const mod = modules.find(m => m.id === currentEditingModuleId);
+            if (!mod) return;
+            
+            const sum = mod.drawerHeights.reduce((a, b) => a + b, 0);
+            const internal = mod.internalHeight;
+            
+            document.getElementById('currentSum').textContent = sum.toFixed(2);
+            
+            const statusEl = document.getElementById('sumStatus');
+            
+            if (Math.abs(sum - internal) < 0.05) {
+                statusEl.innerHTML = `<span class="text-emerald-400">✓ Exacto</span>`;
+            } else {
+                const diff = (sum - internal).toFixed(2);
+                statusEl.innerHTML = `<span class="text-amber-400">Δ ${diff}</span>`;
+            }
+        }
+        
+        function adjustUnlockedDrawersAction() {
+            const mod = modules.find(m => m.id === currentEditingModuleId);
+            if (!mod) return;
+            
+            adjustUnlockedDrawers(mod);
+            
+            // Re-populate to show new values
+            populateDrawersList(mod);
+            updateCurrentSum();
+        }
+        
+        function adjustUnlockedDrawers(mod) {
+            const internal = mod.internalHeight;
+            let sumLocked = 0;
+            let unlockedIndices = [];
+            
+            mod.drawerLocked.forEach((locked, i) => {
+                if (locked) {
+                    sumLocked += mod.drawerHeights[i];
+                } else {
+                    unlockedIndices.push(i);
+                }
+            });
+            
+            const remaining = internal - sumLocked;
+            
+            if (remaining < 0) {
+                alert("Las alturas bloqueadas superan el espacio interno disponible.");
+                return;
+            }
+            
+            const numUnlocked = unlockedIndices.length;
+            if (numUnlocked === 0) {
+                alert("No hay cajones desbloqueados para ajustar.");
+                return;
+            }
+            
+            const share = remaining / numUnlocked;
+            
+            let totalSet = 0;
+            
+            for (let j = 0; j < numUnlocked - 1; j++) {
+                const idx = unlockedIndices[j];
+                const rounded = parseFloat(share.toFixed(2));
+                mod.drawerHeights[idx] = rounded;
+                totalSet += rounded;
+            }
+            
+            // Last one gets the remainder for exact sum
+            const lastIdx = unlockedIndices[numUnlocked - 1];
+            mod.drawerHeights[lastIdx] = parseFloat((remaining - totalSet).toFixed(2));
+        }
+        
+        function resetDrawersToEqual() {
+            const mod = modules.find(m => m.id === currentEditingModuleId);
+            if (!mod || mod.numDrawers === 0) return;
+            
+            const n = mod.numDrawers;
+            const internal = mod.internalHeight;
+            
+            if (n <= 0 || internal <= 0) return;
+            
+            const base = parseFloat((internal / n).toFixed(2));
+            let sum = 0;
+            const newHeights = [];
+            
+            for (let i = 0; i < n - 1; i++) {
+                newHeights.push(base);
+                sum += base;
+            }
+            newHeights.push(parseFloat((internal - sum).toFixed(2)));
+            
+            mod.drawerHeights = newHeights;
+            mod.drawerLocked = Array(n).fill(false);
+            
+            populateDrawersList(mod);
+            updateCurrentSum();
+        }
+        
+        function saveDrawerChanges() {
+            const mod = modules.find(m => m.id === currentEditingModuleId);
+            if (!mod) return;
+            
+            // Validation: min height
+            const minHeight = 3;
+            const tooSmall = mod.drawerHeights.some(h => h < minHeight);
+            
+            if (tooSmall) {
+                if (!confirm(`Algunos cajones tienen menos de ${minHeight} cm. ¿Guardar de todos modos?`)) {
+                    return;
+                }
+            }
+            
+            // Ensure sum is very close to internal (fix floating point)
+            const currentSum = mod.drawerHeights.reduce((a, b) => a + b, 0);
+            if (Math.abs(currentSum - mod.internalHeight) > 0.1) {
+                // Force last to exact
+                let sumExceptLast = 0;
+                for (let i = 0; i < mod.drawerHeights.length - 1; i++) {
+                    sumExceptLast += mod.drawerHeights[i];
+                }
+                mod.drawerHeights[mod.drawerHeights.length - 1] = parseFloat((mod.internalHeight - sumExceptLast).toFixed(2));
+            }
+            
+            saveToLocalStorage();
+            closeDrawerModal();
+            renderModulesList();
+            showToast("Cambios en cajones guardados");
+        }
+        
+        function cancelDrawerEdit() {
+            const mod = modules.find(m => m.id === currentEditingModuleId);
+            if (mod && backupHeights && backupLocked) {
+                mod.drawerHeights = backupHeights;
+                mod.drawerLocked = backupLocked;
+            }
+            closeDrawerModal();
+        }
+        
+        function closeDrawerModal() {
+            const modal = document.getElementById('drawerModal');
+            modal.classList.remove('flex');
+            modal.classList.add('hidden');
+            currentEditingModuleId = null;
+            backupHeights = null;
+            backupLocked = null;
+        }
+
+        // ==================== PREVIEW & PDF ====================
+        function showPreviewModal() {
+            const selected = modules.filter(m => m.selectedForPDF);
+            
+            if (selected.length === 0) {
+                alert("No hay módulos seleccionados para incluir en el PDF. Activa el interruptor en las tarjetas.");
+                return;
+            }
+            
+            const container = document.getElementById('previewContent');
+            container.innerHTML = '';
+            
+            let html = `<div class="space-y-8">`;
+            
+            selected.forEach(mod => {
+                html += `
+                    <div class="border-l-2 border-teal-500 pl-5">
+                        <div class="font-semibold text-lg">${mod.name}</div>
+                        <div class="text-xs text-zinc-400">${mod.width}×${mod.height} cm • Canto ${mod.cantoType.toUpperCase()}</div>
+                        
+                        ${mod.numDoors > 0 ? `
+                            <div class="mt-3">
+                                <div class="text-teal-400 text-xs font-medium tracking-wider">PUERTAS</div>
+                                <div class="text-sm mt-0.5">Alto ${mod.doorAlto} cm × Ancho ${mod.doorAncho} cm = ${mod.numDoors} unidades | Tipo de borde: ${mod.cantoType === 'duro' ? 'Canto Duro' : 'Canto PVC'}</div>
+                            </div>
+                        ` : ''}
+                        
+                        ${mod.numDrawers > 0 ? `
+                            <div class="mt-3">
+                                <div class="text-teal-400 text-xs font-medium tracking-wider">CAJONES</div>
+                                <div class="mt-1 space-y-[1px] text-sm">
+                                    ${mod.drawerHeights.map((h, i) => {
+                                        let label = i === 0 ? 'Superior' : (i === mod.numDrawers - 1 ? 'Inferior' : `Intermedio ${i}`);
+                                        return `<div class="flex"><span class="w-20 text-zinc-400">• ${label}:</span> <span class="font-medium tabular-nums">${h} cm</span></div>`;
+                                    }).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            });
+            
+            html += `</div>`;
+            container.innerHTML = html;
+            
+            document.getElementById('previewModal').classList.remove('hidden');
+            document.getElementById('previewModal').classList.add('flex');
+        }
+        
+        function closePreviewModal() {
+            const modal = document.getElementById('previewModal');
+            modal.classList.remove('flex');
+            modal.classList.add('hidden');
+        }
+        
+        function copyPreviewToClipboard() {
+            const selected = modules.filter(m => m.selectedForPDF);
+            if (selected.length === 0) return;
+            
+            let text = `HATIKU FURNITURE DESIGN\nListado de Puertas y Cajones\n`;
+            text += `Proyecto: ${projectName} | Fecha: ${new Date().toLocaleDateString('es-ES')}\n\n`;
+            
+            selected.forEach(mod => {
+                text += `${mod.name}\n`;
+                text += `${mod.width}×${mod.height} cm • Canto ${mod.cantoType.toUpperCase()}\n\n`;
+                
+                if (mod.numDoors > 0) {
+                    text += `PUERTAS: Alto ${mod.doorAlto} cm × Ancho ${mod.doorAncho} cm = ${mod.numDoors} unidades | Tipo de borde: ${mod.cantoType === 'duro' ? 'Canto Duro' : 'Canto PVC'}\n`;
+                }
+                
+                if (mod.numDrawers > 0) {
+                    text += `CAJONES:\n`;
+                    mod.drawerHeights.forEach((h, i) => {
+                        let label = i === 0 ? 'Superior' : (i === mod.numDrawers - 1 ? 'Inferior' : `Intermedio ${i}`);
+                        text += `• Cajón ${label}: ${h} cm\n`;
+                    });
+                }
+                text += `\n`;
+            });
+            
+            text += `--- Constantes técnicas ---\nSeparación (S): 0.2 cm | Canto Duro: 0.2 cm | Canto PVC: 0.1 cm\nFórmula: 2×(S+C) + (N-1)×(2C+S)`;
+            
+            navigator.clipboard.writeText(text).then(() => {
+                const origText = event.currentTarget ? event.currentTarget.innerHTML : '';
+                showToast("Listado copiado al portapapeles");
+            }).catch(() => {
+                alert("No se pudo copiar automáticamente. El texto está en la consola.");
+                console.log(text);
+            });
+        }
+        
+        function generatePDFFromPreview() {
+            closePreviewModal();
+            setTimeout(() => {
+                generatePDF();
+            }, 300);
+        }
+        
+        function generatePDF() {
+            const selected = modules.filter(m => m.selectedForPDF);
+            
+            if (selected.length === 0) {
+                alert("No hay módulos seleccionados para el PDF.");
+                return;
+            }
+            
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({
+                orientation: 'portrait',
+                unit: 'mm',
+                format: 'a4'
+            });
+            
+            const pageWidth = doc.internal.pageSize.getWidth();
+            let y = 18;
+            
+            // Header bar
+            doc.setFillColor(13, 148, 136); // teal-600
+            doc.rect(0, 0, pageWidth, 22, 'F');
+            
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(16);
+            doc.text("HATIKU FURNITURE DESIGN", pageWidth / 2, 10, { align: 'center' });
+            
+            doc.setFontSize(9);
+            doc.text("LISTADO PROFESIONAL DE CORTE • PUERTAS Y CAJONES", pageWidth / 2, 16, { align: 'center' });
+            
+            // Project info
+            doc.setTextColor(40, 40, 40);
+            doc.setFontSize(9);
+            y = 30;
+            doc.text(`Proyecto: ${projectName}`, 15, y);
+            doc.text(`Fecha: ${new Date().toLocaleDateString('es-ES')}`, pageWidth - 15, y, { align: 'right' });
+            
+            // Summary
+            y += 10;
+            doc.setFontSize(11);
+            doc.setTextColor(13, 148, 136);
+            doc.text("RESUMEN GENERAL", 15, y);
+            
+            y += 6;
+            doc.setFontSize(9);
+            doc.setTextColor(60, 60, 60);
+            
+            let totalDoors = 0, totalDrawers = 0;
+            selected.forEach(m => {
+                totalDoors += m.numDoors || 0;
+                totalDrawers += m.numDrawers || 0;
+            });
+            
+            doc.text(`Módulos incluidos: ${selected.length}`, 15, y);
+            doc.text(`Total puertas: ${totalDoors}   •   Total cajones: ${totalDrawers}`, pageWidth - 15, y, { align: 'right' });
+            
+            y += 8;
+            
+            // Modules detail
+            selected.forEach((mod, idx) => {
+                if (y > 245) {
+                    doc.addPage();
+                    y = 20;
+                }
+                
+                // Module header
+                doc.setFillColor(245, 245, 245);
+                doc.rect(12, y - 4, pageWidth - 24, 8, 'F');
+                
+                doc.setTextColor(13, 148, 136);
+                doc.setFontSize(10);
+                doc.text(mod.name, 15, y);
+                
+                doc.setTextColor(90, 90, 90);
+                doc.setFontSize(8);
+                doc.text(`${mod.width}×${mod.height} cm  •  Canto: ${mod.cantoType.toUpperCase()}`, pageWidth - 15, y, { align: 'right' });
+                
+                y += 9;
+                
+                // Puertas
+                if (mod.numDoors > 0) {
+                    doc.setTextColor(30, 30, 30);
+                    doc.setFontSize(9);
+                    doc.text(`PUERTAS (${mod.numDoors} unidades)`, 15, y);
+                    y += 4.5;
+                    
+                    doc.setFontSize(8.5);
+                    doc.text(`   Alto: ${mod.doorAlto} cm   ×   Ancho: ${mod.doorAncho} cm por unidad`, 18, y);
+                    y += 4;
+                    doc.text(`   Deducción total aplicada: ${mod.doorDeduccion} cm`, 18, y);
+                    y += 6;
+                }
+                
+                // Cajones
+                if (mod.numDrawers > 0) {
+                    doc.setTextColor(30, 30, 30);
+                    doc.setFontSize(9);
+                    doc.text(`CAJONES (${mod.numDrawers} unidades)`, 15, y);
+                    y += 4.5;
+                    
+                    doc.setFontSize(8.5);
+                    doc.text(`   Ancho de cajón: ${mod.drawerWidth} cm    |    Espacio interno: ${mod.internalHeight} cm`, 18, y);
+                    y += 5;
+                    
+                    mod.drawerHeights.forEach((h, i) => {
+                        let label = i === 0 ? 'Superior' : (i === mod.numDrawers - 1 ? 'Inferior' : `Intermedio ${i}`);
+                        doc.text(`   • Cajón ${label}: ${h} cm de alto`, 20, y);
+                        y += 4.2;
+                    });
+                    y += 3;
+                }
+                
+                // Separator
+                doc.setDrawColor(210, 210, 210);
+                doc.line(15, y, pageWidth - 15, y);
+                y += 7;
+            });
+            
+            // ==================== NUEVA SECCIÓN: LISTA DE CORTES ====================
+            if (y > 200) {
+                doc.addPage();
+                y = 25;
+            }
+            
+            y += 8;
+            doc.setFillColor(13, 148, 136);
+            doc.rect(12, y - 5, pageWidth - 24, 9, 'F');
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(11);
+            doc.text("LISTA DE CORTES", pageWidth / 2, y, { align: 'center' });
+            
+            y += 12;
+            doc.setTextColor(40, 40, 40);
+            doc.setFontSize(8);
+            
+            // Header row
+            doc.setFontSize(7);
+            doc.setTextColor(100, 100, 100);
+            doc.text("MÓDULO", 15, y);
+            doc.text("CATEGORÍA", 52, y);
+            doc.text("ALTURA", 92, y);
+            doc.text("ANCHO", 115, y);
+            doc.text("CANT.", 138, y);
+            doc.text("BORDE", 158, y);
+            doc.text("COLOR MELAMINA", 180, y);
+            y += 2;
+            doc.setDrawColor(180, 180, 180);
+            doc.line(15, y, pageWidth - 15, y);
+            y += 6;
+            
+            doc.setTextColor(30, 30, 30);
+            doc.setFontSize(8);
+            
+            selected.forEach(mod => {
+                const tipoBorde = mod.cantoType === 'duro' ? 'Canto Duro' : 'Canto PVC';
+                
+                // Doors (one line with quantity)
+                if (mod.numDoors > 0 && mod.doorAlto > 0) {
+                    if (y > 260) { doc.addPage(); y = 25; }
+                    
+                    const color = mod.melamineColor || '-';
+                    doc.text(mod.name.length > 20 ? mod.name.substring(0, 18) + '...' : mod.name, 15, y);
+                    doc.text("Puerta", 52, y);
+                    doc.text(mod.doorAlto.toFixed(1) + " cm", 92, y);
+                    doc.text(mod.doorAncho.toFixed(1) + " cm", 115, y);
+                    doc.text(String(mod.numDoors), 140, y);
+                    doc.text(tipoBorde, 158, y);
+                    doc.text(color.length > 14 ? color.substring(0,12)+'...' : color, 180, y);
+                    y += 5.5;
+                }
+                
+                // Drawers (one line per drawer with its height)
+                if (mod.numDrawers > 0 && mod.drawerHeights && mod.drawerHeights.length > 0) {
+                    mod.drawerHeights.forEach((h, i) => {
+                        if (y > 260) { doc.addPage(); y = 25; }
+                        
+                        let catLabel = i === 0 ? 'Cajón Superior' : (i === mod.numDrawers - 1 ? 'Cajón Inferior' : `Cajón Interm. ${i}`);
+                        const color = mod.melamineColor || '-';
+                        
+                        doc.text(mod.name.length > 20 ? mod.name.substring(0, 18) + '...' : mod.name, 15, y);
+                        doc.text(catLabel, 52, y);
+                        doc.text(h.toFixed(1) + " cm", 92, y);
+                        doc.text(mod.drawerWidth.toFixed(1) + " cm", 115, y);
+                        doc.text("1", 140, y);
+                        doc.text(tipoBorde, 158, y);
+                        doc.text(color.length > 14 ? color.substring(0,12)+'...' : color, 180, y);
+                        y += 5.5;
+                    });
+                }
+            });
+            
+            // Total de canto (edge banding)
+            y += 6;
+            let totalEdge = 0;
+            selected.forEach(m => totalEdge += calculateEdgeBanding(m));
+            
+            doc.setFontSize(8);
+            doc.setTextColor(13, 148, 136);
+            doc.text(`TOTAL CANTO (EDGE BANDING) ESTIMADO: ${totalEdge.toFixed(2)} metros lineales`, 15, y);
+            doc.setTextColor(100, 100, 100);
+            doc.setFontSize(6.5);
+            y += 4;
+            doc.text("(Cálculo aproximado de perímetro de frentes visibles • +5-10% recomendado por desperdicio)", 15, y);
+            
+            y += 10;
+            
+            // Nota final limpia
+            if (y > 250) {
+                doc.addPage();
+                y = 25;
+            }
+            
+            y += 6;
+            doc.setFontSize(7);
+            doc.setTextColor(120, 120, 120);
+            doc.text("© Hatiku Furniture Design • Calculadora Profesional de Módulos • Generado automáticamente", pageWidth / 2, y, { align: 'center' });
+            
+            // Save
+            const safeName = projectName.replace(/[^a-z0-9]/gi, '_').toLowerCase() || 'proyecto';
+            const dateStr = new Date().toISOString().slice(0,10);
+            doc.save(`Hatiku_${safeName}_${dateStr}.pdf`);
+        }
+
+        // ==================== TECHNICAL MODAL ====================
+        function showTechModal() {
+            document.getElementById('techModal').classList.remove('hidden');
+            document.getElementById('techModal').classList.add('flex');
+        }
+        
+        function closeTechModal() {
+            const modal = document.getElementById('techModal');
+            modal.classList.remove('flex');
+            modal.classList.add('hidden');
+        }
+        
+        // Close modals on escape or backdrop click
+        function setupModalListeners() {
+            // Drawer modal
+            const drawerModal = document.getElementById('drawerModal');
+            drawerModal.addEventListener('click', function(e) {
+                if (e.target === drawerModal) {
+                    cancelDrawerEdit();
+                }
+            });
+            
+            // Preview modal
+            const previewModal = document.getElementById('previewModal');
+            previewModal.addEventListener('click', function(e) {
+                if (e.target === previewModal) closePreviewModal();
+            });
+            
+            // Tech modal
+            const techModal = document.getElementById('techModal');
+            techModal.addEventListener('click', function(e) {
+                if (e.target === techModal) closeTechModal();
+            });
+            
+            // ESC key
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    if (!drawerModal.classList.contains('hidden')) {
+                        cancelDrawerEdit();
+                    } else if (!previewModal.classList.contains('hidden')) {
+                        closePreviewModal();
+                    } else if (!techModal.classList.contains('hidden')) {
+                        closeTechModal();
+                    }
+                }
+            });
+            
+            // Project name change
+            const nameInput = document.getElementById('projectNameInput');
+            nameInput.addEventListener('input', updateProjectName);
+            nameInput.addEventListener('blur', updateProjectName);
+        }
+
+        // ==================== LOAD TECHNICAL EXAMPLE ====================
+        function loadTechnicalExample() {
+            // Clear existing if user wants? No, just add
+            const width = 90;
+            const height = 60;
+            const cantoType = 'duro';
+            const numDoors = 2;
+            const numDrawers = 3;
+            
+            const C = getC(cantoType);
+            
+            // Calculate doors
+            const doorDeduccion = parseFloat(calculateDeduction(numDoors, cantoType).toFixed(2));
+            const doorAlto = parseFloat((height - 2 * (S + C)).toFixed(2));
+            const doorAncho = parseFloat(((width - doorDeduccion) / numDoors).toFixed(2));
+            
+            // Calculate drawers
+            const deduction = parseFloat(calculateDeduction(numDrawers, cantoType).toFixed(2));
+            const drawerWidth = parseFloat((width - 2 * (S + C)).toFixed(2));
+            const internalHeight = parseFloat((height - deduction).toFixed(2));
+            
+            // Initial equal (will be overridden for demo)
+            let drawerHeights = [];
+            const base = parseFloat((internalHeight / numDrawers).toFixed(2));
+            let sumH = 0;
+            for (let i = 0; i < numDrawers - 1; i++) {
+                drawerHeights.push(base);
+                sumH += base;
+            }
+            drawerHeights.push(parseFloat((internalHeight - sumH).toFixed(2)));
+            
+            let drawerLocked = Array(numDrawers).fill(false);
+            
+            const demoModule = {
+                id: 'mod_' + Date.now(),
+                name: `Módulo ${width}×${height} cm`,
+                height: height,
+                width: width,
+                cantoType: cantoType,
+                numDoors: numDoors,
+                numDrawers: numDrawers,
+                selectedForPDF: true,
+                doorAlto: doorAlto,
+                doorAncho: doorAncho,
+                doorDeduccion: doorDeduccion,
+                drawerHeights: drawerHeights,
+                drawerLocked: drawerLocked,
+                drawerWidth: drawerWidth,
+                internalHeight: internalHeight,
+                deduction: deduction
+            };
+            
+            // Override with the technical example values (locked drawers)
+            demoModule.drawerHeights = [30, 20, parseFloat((internalHeight - 50).toFixed(2))];
+            demoModule.drawerLocked = [true, true, false];
+            
+            modules.push(demoModule);
+            saveToLocalStorage();
+            renderModulesList();
+            
+            // Open editor immediately to show the feature
+            setTimeout(() => {
+                editDrawers(demoModule.id);
+                showToast("Ejemplo técnico cargado con cajones bloqueados");
+            }, 450);
+        }
+
+        // ==================== INITIALIZATION ====================
+        function initializeApp() {
+            initTailwind();
+            
+            // Default canto
+            selectCantoType('duro');
+            
+            // Load saved data
+            loadFromLocalStorage();
+            
+            // Render initial state
+            renderModulesList();
+            updateStats();
+            
+            // Setup listeners
+            setupModalListeners();
+            
+            // Keyboard shortcuts hint (optional)
+            console.log('%c[Hatiku] App inicializada correctamente. 100% funcional offline.', 'color:#14b8a6');
+            
+            // If first time and no modules, optionally auto load example? No, let user decide.
+            // But show empty state nicely already handled.
+            
+            // Make sure checkboxes work with qty inputs (enable/disable visual)
+            const hasDoorsCb = document.getElementById('hasDoors');
+            const numDoorsIn = document.getElementById('numDoorsInput');
+            const hasDrawersCb = document.getElementById('hasDrawers');
+            const numDrawersIn = document.getElementById('numDrawersInput');
+            
+            function syncInputs() {
+                numDoorsIn.disabled = !hasDoorsCb.checked;
+                numDrawersIn.disabled = !hasDrawersCb.checked;
+                
+                if (!hasDoorsCb.checked) numDoorsIn.style.opacity = '0.5';
+                else numDoorsIn.style.opacity = '1';
+                
+                if (!hasDrawersCb.checked) numDrawersIn.style.opacity = '0.5';
+                else numDrawersIn.style.opacity = '1';
+            }
+            
+            hasDoorsCb.addEventListener('change', syncInputs);
+            hasDrawersCb.addEventListener('change', syncInputs);
+            syncInputs(); // initial
+
+            // Mutual exclusivity: doors and drawers cannot both be selected
+            hasDoorsCb.addEventListener('change', function() {
+                if (this.checked) {
+                    hasDrawersCb.checked = false;
+                    numDrawersIn.style.opacity = '0.5';
+                    numDrawersIn.disabled = true;
+                }
+            });
+            
+            hasDrawersCb.addEventListener('change', function() {
+                if (this.checked) {
+                    hasDoorsCb.checked = false;
+                    numDoorsIn.style.opacity = '0.5';
+                    numDoorsIn.disabled = true;
+                }
+            });
+            
+            // Bonus: allow Enter in form inputs to add module
+            const formInputs = [document.getElementById('widthInput'), document.getElementById('heightInput'), numDoorsIn, numDrawersIn];
+            formInputs.forEach(inp => {
+                inp.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        addModule();
+                    }
+                });
+            });
+            
+            // Welcome toast on very first load (if no previous data)
+            if (modules.length === 0 && !localStorage.getItem('hatiku_modules')) {
+                setTimeout(() => {
+                    // Don't auto show, user can click the example button
+                }, 1200);
+            }
+
+            // ==================== PWA SERVICE WORKER REGISTRATION ====================
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => {
+                    navigator.serviceWorker.register('./sw.js')
+                        .then((registration) => {
+                            console.log('[PWA] Service Worker registrado con éxito:', registration.scope);
+                        })
+                        .catch((error) => {
+                            console.log('[PWA] Error al registrar Service Worker:', error);
+                        });
+                });
+            }
+        }
+
+        // ==================== 2D TECHNICAL PLAN GENERATOR ====================
+        let currentPlanModule = null;
+        let currentPlanSVGString = '';
+
+        function show2DPlan(moduleId) {
+            const mod = modules.find(m => m.id === moduleId);
+            if (!mod) return;
+            
+            currentPlanModule = mod;
+            
+            document.getElementById('planModalModuleName').textContent = mod.name;
+            document.getElementById('planModuleInfo').innerHTML = 
+                `${mod.width} × ${mod.height} cm &nbsp;•&nbsp; Canto ${mod.cantoType.toUpperCase()} &nbsp;•&nbsp; ${mod.numDoors} puertas / ${mod.numDrawers} cajones`;
+            
+            // Reset controls
+            document.getElementById('planScaleSlider').value = 1;
+            document.getElementById('showDimensions').checked = true;
+            document.getElementById('showLabels').checked = true;
+            document.getElementById('planScaleValue').textContent = '1.0x';
+            
+            // Generate initial SVG
+            generatePlanSVG(mod);
+            
+            // Show modal
+            const modal = document.getElementById('plan2DModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            
+            // Attach scale listener
+            const scaleSlider = document.getElementById('planScaleSlider');
+            scaleSlider.oninput = function() {
+                document.getElementById('planScaleValue').textContent = parseFloat(this.value).toFixed(1) + 'x';
+                regeneratePlanSVG();
+            };
+        }
+        
+        function regeneratePlanSVG() {
+            if (currentPlanModule) {
+                generatePlanSVG(currentPlanModule);
+            }
+        }
+        
+        function generatePlanSVG(mod) {
+            const container = document.getElementById('planSVGContainer');
+            container.innerHTML = '';
+            
+            const scale = parseFloat(document.getElementById('planScaleSlider').value);
+            const showDims = document.getElementById('showDimensions').checked;
+            const showLabs = document.getElementById('showLabels').checked;
+            
+            // Calculate drawing dimensions (maintain aspect ratio)
+            const aspectRatio = mod.width / mod.height;
+            let drawWidth = 520 * scale;
+            let drawHeight = drawWidth / aspectRatio;
+            
+            if (drawHeight > 380) {
+                drawHeight = 380;
+                drawWidth = drawHeight * aspectRatio;
+            }
+            
+            const padding = 70;
+            const svgWidth = drawWidth + padding * 2;
+            const svgHeight = drawHeight + padding * 2 + 30;
+            
+            let svg = `<svg width="${svgWidth}" height="${svgHeight}" viewBox="0 0 ${svgWidth} ${svgHeight}" xmlns="http://www.w3.org/2000/svg" style="max-width:100%; height:auto;">`;
+            
+            svg += `<rect x="0" y="0" width="${svgWidth}" height="${svgHeight}" fill="#f8f7f4"/>`;
+            
+            const ox = padding;
+            const oy = padding + 10;
+            
+            // Outer carcass
+            svg += `<rect x="${ox}" y="${oy}" width="${drawWidth}" height="${drawHeight}" 
+                     fill="#ffffff" stroke="#1f2937" stroke-width="3.5" rx="2"/>`;
+            
+            // DOORS vertical divisions
+            if (mod.numDoors > 0 && mod.doorAncho > 0) {
+                const doorW = (drawWidth / mod.numDoors);
+                for (let i = 1; i < mod.numDoors; i++) {
+                    const x = ox + doorW * i;
+                    svg += `<line x1="${x}" y1="${oy}" x2="${x}" y2="${oy + drawHeight}" 
+                             stroke="#374151" stroke-width="1.5" stroke-dasharray="4,2"/>`;
+                }
+                
+                if (showLabs && mod.numDoors <= 4) {
+                    for (let i = 0; i < mod.numDoors; i++) {
+                        const cx = ox + doorW * (i + 0.5);
+                        svg += `<text x="${cx}" y="${oy - 8}" font-family="Inter, system-ui, sans-serif" font-size="9" 
+                                 fill="#475569" text-anchor="middle" font-weight="500">Puerta ${i+1}</text>`;
+                        if (showDims) {
+                            svg += `<text x="${cx}" y="${oy + drawHeight + 14}" font-family="Inter, system-ui, sans-serif" font-size="8" 
+                                     fill="#64748b" text-anchor="middle">${mod.doorAncho.toFixed(1)} cm</text>`;
+                        }
+                    }
+                }
+            }
+            
+            // DRAWERS horizontal divisions + labels
+            if (mod.numDrawers > 0 && mod.drawerHeights && mod.drawerHeights.length > 0) {
+                let currentY = oy;
+                const totalInternal = mod.internalHeight || mod.height;
+                
+                for (let i = 0; i < mod.drawerHeights.length; i++) {
+                    const hRatio = mod.drawerHeights[i] / totalInternal;
+                    const hPx = drawHeight * hRatio;
+                    currentY += hPx;
+                    
+                    if (i < mod.drawerHeights.length - 1) {
+                        svg += `<line x1="${ox}" y1="${currentY}" x2="${ox + drawWidth}" y2="${currentY}" 
+                                 stroke="#374151" stroke-width="1.5" stroke-dasharray="3,2"/>`;
+                    }
+                    
+                    if (showDims) {
+                        const labelY = currentY - hPx / 2;
+                        const labelX = ox + drawWidth + 8;
+                        
+                        svg += `<line x1="${ox + drawWidth}" y1="${currentY - hPx}" x2="${labelX - 2}" y2="${currentY - hPx}" stroke="#64748b" stroke-width="0.8"/>`;
+                        svg += `<line x1="${ox + drawWidth}" y1="${currentY}" x2="${labelX - 2}" y2="${currentY}" stroke="#64748b" stroke-width="0.8"/>`;
+                        
+                        svg += `<text x="${labelX + 12}" y="${labelY + 3}" font-family="Inter, system-ui, sans-serif" font-size="8.5" 
+                                 fill="#334155" text-anchor="start">${mod.drawerHeights[i].toFixed(1)} cm</text>`;
+                    }
+                    
+                    if (showLabs && mod.numDrawers <= 5) {
+                        let dLabel = i === 0 ? 'Superior' : (i === mod.numDrawers - 1 ? 'Inferior' : `Interm. ${i}`);
+                        svg += `<text x="${ox + 6}" y="${currentY - hPx/2 + 3}" font-family="Inter, system-ui, sans-serif" font-size="7.5" 
+                                 fill="#64748b">${dLabel}</text>`;
+                    }
+                }
+            }
+            
+            // OVERALL DIMENSIONS with arrows
+            if (showDims) {
+                // Width bottom
+                const dimY = oy + drawHeight + 32;
+                svg += `<line x1="${ox}" y1="${dimY}" x2="${ox + drawWidth}" y2="${dimY}" stroke="#0f766e" stroke-width="1.2"/>`;
+                svg += `<polygon points="${ox},${dimY} ${ox+7},${dimY-3} ${ox+7},${dimY+3}" fill="#0f766e"/>`;
+                svg += `<polygon points="${ox+drawWidth},${dimY} ${ox+drawWidth-7},${dimY-3} ${ox+drawWidth-7},${dimY+3}" fill="#0f766e"/>`;
+                svg += `<text x="${ox + drawWidth/2}" y="${dimY + 13}" font-family="Inter, system-ui, sans-serif" font-size="10" 
+                         fill="#0f766e" text-anchor="middle" font-weight="600">${mod.width} cm</text>`;
+                
+                // Height left
+                const dimX = ox - 28;
+                svg += `<line x1="${dimX}" y1="${oy}" x2="${dimX}" y2="${oy + drawHeight}" stroke="#0f766e" stroke-width="1.2"/>`;
+                svg += `<polygon points="${dimX},${oy} ${dimX-3},${oy+7} ${dimX+3},${oy+7}" fill="#0f766e"/>`;
+                svg += `<polygon points="${dimX},${oy+drawHeight} ${dimX-3},${oy+drawHeight-7} ${dimX+3},${oy+drawHeight-7}" fill="#0f766e"/>`;
+                svg += `<text x="${dimX - 8}" y="${oy + drawHeight/2 + 3}" font-family="Inter, system-ui, sans-serif" font-size="10" 
+                         fill="#0f766e" text-anchor="middle" font-weight="600" transform="rotate(-90, ${dimX - 8}, ${oy + drawHeight/2})">${mod.height} cm</text>`;
+            }
+            
+            if (showLabs) {
+                svg += `<text x="${ox + drawWidth/2}" y="${oy - 22}" font-family="Inter, system-ui, sans-serif" font-size="11" 
+                         fill="#1e2937" text-anchor="middle" font-weight="600">VISTA FRONTAL • ${mod.name}</text>`;
+            }
+            
+            svg += `</svg>`;
+            
+            currentPlanSVGString = svg;
+            container.innerHTML = svg;
+        }
+        
+        function close2DPlanModal() {
+            const modal = document.getElementById('plan2DModal');
+            modal.classList.remove('flex');
+            modal.classList.add('hidden');
+            currentPlanModule = null;
+            currentPlanSVGString = '';
+        }
+        
+        function downloadPlanSVG() {
+            if (!currentPlanSVGString || !currentPlanModule) return;
+            const blob = new Blob([currentPlanSVGString], { type: 'image/svg+xml' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Plano2D_${currentPlanModule.name.replace(/\s+/g, '_')}.svg`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+        
+        function downloadPlanPNG() {
+            if (!currentPlanSVGString || !currentPlanModule) return;
+            
+            const svgBlob = new Blob([currentPlanSVGString], { type: 'image/svg+xml;charset=utf-8' });
+            const url = URL.createObjectURL(svgBlob);
+            
+            const img = new Image();
+            img.onload = function() {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#f8f7f4';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0);
+                
+                const pngUrl = canvas.toDataURL('image/png');
+                const a = document.createElement('a');
+                a.href = pngUrl;
+                a.download = `Plano2D_${currentPlanModule.name.replace(/\s+/g, '_')}.png`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            };
+            img.src = url;
+        }
+        
+        function addPlanToPDF() {
+            if (!currentPlanModule || !currentPlanSVGString) return;
+            close2DPlanModal();
+            setTimeout(() => {
+                if (confirm("¿Generar el PDF completo del proyecto ahora? (Los planos 2D se pueden añadir manualmente o en futuras mejoras)")) {
+                    generatePDF();
+                }
+            }, 280);
+        }
+        
+        // Boot app
+        window.onload = initializeApp;
+    </script>
+</body>
+</html>

@@ -2,7 +2,7 @@
   "name": "Hatiku Furniture Design",
   "short_name": "Hatiku",
   "description": "Calculadora profesional de módulos, puertas y cajones con planos 2D y lista de cortes",
-  "start_url": "./hatiku-furniture-calculator.html",
+  "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#0a0a0a",
   "theme_color": "#14b8a6",
